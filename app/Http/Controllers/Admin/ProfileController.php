@@ -1,0 +1,76 @@
+<?php
+// 以下を追記することを忘れ内容に
+// use App\Profile;
+//
+
+namespace App\Http\Controllers\Admin;
+
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use App\Profile;
+use App\ProfileHistory;
+use Carbon\Carbon;
+
+class ProfileController extends Controller
+{
+  public function add(){
+    return view("admin.profile.create");
+  }
+  public function create(Request $request){
+    // \Debugbar::info($request);
+    // 以下を追記
+    // Varidationを行う
+    // \Debugbar::info(News::$rules);
+    $this->validate($request, Profile::$rules);
+
+    $profile = new Profile;
+    $form = $request->all();
+    // \Debugbar::info($path);
+
+    // フォームから送信されてきた_tokenを削除する
+    unset($form['_token']);
+    // データベースに保存する
+
+    // \Debugbar::info($form);
+    // \Debugbar::info($form);
+    $profile->fill($form);
+    $profile->save();
+    \Debugbar::info($profile);
+    return redirect("/admin/profile/create");
+  }
+  public function index(Request $request){
+    $cond_title = $request->cond_title;
+    if ($cond_title != '') {
+        // 検索されたら検索結果を取得する
+        $posts = Profile::where('name', $cond_title)->get();
+    } else {
+        // それ以外はすべてのニュースを取得する
+        $posts = Profile::all();
+    }
+    return view('admin.profile.index', ['posts' => $posts, 'cond_title' => $cond_title]);
+
+  }
+    public function edit(Request $request){
+      $profile = Profile::find($request->id);
+      return view("admin.profile.edit",["form" => $profile]);
+    }
+    public function update(Request $request){
+      $this->validate($request, Profile::$rules);
+      $profile = Profile::find($request->id);
+      $form = $request->all();
+      unset($form['_token']);
+      $profile->fill($form);
+      $profile->save();
+
+      $profile_history = new ProfileHistory;
+      $profile_history->profile_id = $profile->id;
+      $profile_history->edited_at = Carbon::now();
+      $profile_history->save();
+      return redirect("/admin/profile");
+    }
+    public function delete(Request $request){
+      $profile = Profile::find($request->id);
+      $profile->delete();
+      return redirect("/admin/profile/");
+    }
+}
